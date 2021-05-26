@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>mqtt.js测试</title>
+    <script src = "http://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+
+    <script src="http://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        div{
+            width: 300px;
+            height: 300px;
+            float: left;
+            border: 1px solid blue;
+        }
+    </style>
+    <script type="text/javascript">
+        $(function(){
+            //定义连接选项对象
+            const options = {
+                clean: true,
+                connectTimeout: 4000,
+                clientId:'emqx_client_h5',
+                username: 'user',
+                password: '123456',
+            }
+            const connectUrl = "ws://39.108.100.212:8083/mqtt";
+           const client=mqtt.connect(connectUrl,options);
+            client.on("reconnect",function(){
+            $("#div1").text("正在重连....");
+            });
+            client.on("close",function(){
+            $("#div1").text("客户端已断开连接....");
+            });
+            client.on("disconnect",function(packet){
+            $("#div1").text("从broker接收到断开连接的数据包...."+packet);
+            });
+            client.on("offline",function(){
+            $("#div1").text("客户端脱机下线....");
+            });
+            client.on("error",function(error){
+            $("#div1").text("客户端出现错误...."+error);
+            });
+
+            //注册监听connect事件
+            client.on("connect",function(connack){
+                $("#div1").text("成功连接上服务器"+new Date());
+                //订阅主题
+                client.subscribe("temp",{qos:2});
+                client.subscribe("hum",{qos:2});
+                //每隔两秒发送一次
+                setInterval(publish,2000);
+            });
+            function publish(){
+            const message = "h5_message"+Math.random()+new Date();
+                    client.publish("test",message,{qos:2});
+                    $("#div2").text("成功发布数据："+message);
+            }
+            //注册消息到达
+            client.on("message",function(topic,message,packet){
+                $("#div3").text("客户端订阅到消息，topic="+topic+";消息数据："+message+";数据包"+packet);
+            });
+                $(window).bind("beforeunload",function(){
+                    $("#div1").text("客户关闭窗口，断开连接");
+                    client.end();
+                })
+        });
+
+    </script>
+</head>
+<body>
+
+
+
+<div id ="div1"></div>
+<div id ="div2"></div>
+<div id ="div3"></div>
+
+</body>
+</html>
